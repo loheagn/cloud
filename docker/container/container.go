@@ -30,6 +30,11 @@ func Run(opt *RunOption, output io.Writer) (exitCode int, err error) {
 		return 1, err
 	}
 
+	// 保证最后将容器移除
+	defer func() {
+		_ = cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{})
+	}()
+
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		return 1, err
 	}
