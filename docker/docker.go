@@ -7,7 +7,21 @@ import (
 	"github.com/docker/docker/client"
 )
 
-func GetClient() (cli *client.Client, err error) {
+type InitOption struct {
+	Host string
+}
+
+func GetClient(opt *InitOption) (cli *client.Client, err error) {
+	if len(opt.Host) > 0 {
+		cli, err = client.NewClientWithOpts(client.WithHost(opt.Host))
+		if err == nil {
+			return cli, err
+		}
+	}
+	return client.NewClientWithOpts(client.FromEnv)
+}
+
+func GetDefaultClient() (cli *client.Client, err error) {
 	return client.NewClientWithOpts(client.FromEnv)
 }
 

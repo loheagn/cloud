@@ -10,7 +10,7 @@ import (
 )
 
 func Build(dockerFilepath, ctxPath string, tags []string, output io.Writer) error {
-	cli, err := docker.GetClient()
+	cli, err := docker.GetDefaultClient()
 	if err != nil {
 		return err
 	}

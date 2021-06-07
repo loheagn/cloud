@@ -17,7 +17,7 @@ type RunOption struct {
 
 func Run(opt *RunOption, output io.Writer) (exitCode int, err error) {
 	ctx := context.Background()
-	cli, err := docker.GetClient()
+	cli, err := docker.GetDefaultClient()
 	if err != nil {
 		return 1, err
 	}
