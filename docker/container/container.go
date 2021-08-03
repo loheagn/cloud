@@ -6,26 +6,44 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/loheagn/cloud/docker"
 )
 
 type RunOption struct {
-	Image string
-	Cmd   []string
+	Image   string
+	Cmd     []string
+	WorkDir string
+	Mounts  map[string]string
 }
 
-func Run(opt *RunOption, output io.Writer) (exitCode int, err error) {
-	ctx := context.Background()
+func Run(ctx context.Context, opt *RunOption, output io.Writer) (exitCode int, err error) {
 	cli, err := docker.GetDefaultClient()
 	if err != nil {
 		return 1, err
 	}
 
-	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: opt.Image,
-		Cmd:   opt.Cmd,
-	}, nil, nil, nil, "")
+	// 配置基本参数
+	config := &container.Config{
+		Image:      opt.Image,
+		Cmd:        opt.Cmd,
+		WorkingDir: opt.WorkDir,
+	}
+	// 挂载目录
+	mounts := make([]mount.Mount, 0, len(opt.Mounts))
+	for source, target := range opt.Mounts {
+		mounts = append(mounts, mount.Mount{
+			Type:   mount.TypeBind,
+			Source: source,
+			Target: target,
+		})
+	}
+	hostConfig := &container.HostConfig{
+		Mounts: mounts,
+	}
+
+	resp, err := cli.ContainerCreate(ctx, config, hostConfig, nil, nil, "")
 	if err != nil {
 		return 1, err
 	}
