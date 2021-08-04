@@ -2,31 +2,45 @@ package image
 
 import (
 	"bytes"
+	"context"
 	"testing"
 )
 
-func Test_buildImage(t *testing.T) {
+func TestBuild(t *testing.T) {
 	type args struct {
-		dockerFilepath string
-		ctxPath        string
-		tags           []string
+		ctx context.Context
+		opt *BuildOption
 	}
 	tests := []struct {
-		name          string
-		args          args
-		wantOutput    string
-		wantOutputErr string
-		wantErr       bool
+		name        string
+		args        args
+		checkOutput bool
+		wantErr     bool
 	}{
-		{args: args{"Dockerfile", "../example/ubuntu-test", []string{"test/ubuntu:20.04"}}},
+		{name: "local-build", args: args{
+			ctx: context.Background(),
+			opt: &BuildOption{
+				DockerFilePath: "./Dockerfile",
+				CtxPath:        "../example/ubuntu-test",
+				Tags:           []string{"test/ubuntu:20.04"},
+			}},
+		},
+
+		{name: "remote-build", args: args{
+			ctx: context.Background(),
+			opt: &BuildOption{
+				HostURL:        "tcp://10.251.0.45:2375",
+				DockerFilePath: "./Dockerfile",
+				CtxPath:        "../example/ubuntu-test",
+				Tags:           []string{"test/ubuntu:20.04"},
+			}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			output := &bytes.Buffer{}
-			err := Build(tt.args.dockerFilepath, tt.args.ctxPath, tt.args.tags, output)
-			t.Error(output.String())
-			if (err != nil) != tt.wantErr {
-				t.Errorf("buildImage() error = %v, wantErr %v", err, tt.wantErr)
+			if err := Build(tt.args.ctx, tt.args.opt, output); (err != nil) != tt.wantErr {
+				t.Errorf("Build() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 		})

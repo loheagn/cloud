@@ -12,13 +12,26 @@ import (
 
 func Test_Run(t *testing.T) {
 	const tag string = "test/ubuntu:20.04"
+	const dockerDURL = "tcp://10.251.0.45:2375"
 	mountTestPath, err := filepath.Abs("../example/mount-test")
 	if err != nil {
 		panic(err.Error())
 	}
 	// 先创建一下这个测试用的基础镜像
-	writer := &bytes.Buffer{}
-	_ = image.Build("./Dockerfile", "../example/ubuntu-test", []string{tag}, writer)
+	remoteBuildOpt := &image.BuildOption{
+		HostURL:        dockerDURL,
+		DockerFilePath: "./Dockerfile",
+		CtxPath:        "../example/ubuntu-test",
+		Tags:           []string{tag},
+	}
+	_ = image.Build(context.Background(), remoteBuildOpt, &bytes.Buffer{})
+
+	envBuildOpt := &image.BuildOption{
+		DockerFilePath: "./Dockerfile",
+		CtxPath:        "../example/ubuntu-test",
+		Tags:           []string{tag},
+	}
+	_ = image.Build(context.Background(), envBuildOpt, &bytes.Buffer{})
 
 	type args struct {
 		image  string
@@ -37,6 +50,7 @@ func Test_Run(t *testing.T) {
 		{args: args{image: tag, config: &RunOption{Image: tag, Cmd: []string{"./success.sh"}}}, exitNormal: true},
 		{name: "workdir-test", args: args{image: tag, config: &RunOption{Image: tag, WorkDir: "/etc/apt", Cmd: []string{"pwd"}}}, exitNormal: true, checkOutput: true, output: "/etc/apt"},
 		{name: "mount-test", args: args{image: tag, config: &RunOption{Image: tag, WorkDir: "/etc/apt", Cmd: []string{"ls", "/tmp"}, Mounts: map[string]string{mountTestPath: "/tmp"}}}, exitNormal: true, checkOutput: true, output: "data"},
+		{name: "host-url-test", args: args{image: tag, config: &RunOption{HostURL: dockerDURL, Image: tag, Cmd: []string{"uname"}}}, exitNormal: true, checkOutput: true, output: "Linux"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

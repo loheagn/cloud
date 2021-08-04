@@ -9,17 +9,25 @@ import (
 	"github.com/loheagn/cloud/docker"
 )
 
-func Build(dockerFilepath, ctxPath string, tags []string, output io.Writer) error {
-	cli, err := docker.GetDefaultClient()
+type BuildOption struct {
+	HostURL        string
+	DockerFilePath string
+	CtxPath        string
+	Tags           []string
+}
+
+func Build(ctx context.Context, opt *BuildOption, output io.Writer) error {
+	cli, err := docker.GetClient(&docker.InitOption{
+		Host: opt.HostURL,
+	})
 	if err != nil {
 		return err
 	}
 	buildOpts := types.ImageBuildOptions{
-		Dockerfile: dockerFilepath,
-		Tags:       tags,
+		Dockerfile: opt.DockerFilePath,
+		Tags:       opt.Tags,
 	}
-	buildCtx, _ := archive.TarWithOptions(ctxPath, &archive.TarOptions{})
-	ctx := context.Background()
+	buildCtx, _ := archive.TarWithOptions(opt.CtxPath, &archive.TarOptions{})
 
 	resp, err := cli.ImageBuild(ctx, buildCtx, buildOpts)
 	if err != nil {

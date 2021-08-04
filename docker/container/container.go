@@ -12,6 +12,7 @@ import (
 )
 
 type RunOption struct {
+	HostURL string
 	Image   string
 	Cmd     []string
 	WorkDir string
@@ -19,7 +20,9 @@ type RunOption struct {
 }
 
 func Run(ctx context.Context, opt *RunOption, output io.Writer) (exitCode int, err error) {
-	cli, err := docker.GetDefaultClient()
+	cli, err := docker.GetClient(&docker.InitOption{
+		Host: opt.HostURL,
+	})
 	if err != nil {
 		return 1, err
 	}
