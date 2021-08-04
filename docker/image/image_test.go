@@ -17,23 +17,27 @@ func TestBuild(t *testing.T) {
 		checkOutput bool
 		wantErr     bool
 	}{
-		{name: "local-build", args: args{
-			ctx: context.Background(),
-			opt: &BuildOption{
-				DockerFilePath: "./Dockerfile",
-				CtxPath:        "../example/ubuntu-test",
-				Tags:           []string{"test/ubuntu:20.04"},
-			}},
+		{
+			name: "local-build",
+			args: args{
+				ctx: context.Background(),
+				opt: &BuildOption{
+					DockerFilePath: "./Dockerfile",
+					CtxPath:        "../example/ubuntu-test",
+					Tags:           []string{"test/ubuntu:20.04"},
+				}},
 		},
 
-		{name: "remote-build", args: args{
-			ctx: context.Background(),
-			opt: &BuildOption{
-				HostURL:        "tcp://10.251.0.45:2375",
-				DockerFilePath: "./Dockerfile",
-				CtxPath:        "../example/ubuntu-test",
-				Tags:           []string{"test/ubuntu:20.04"},
-			}},
+		{
+			name: "remote-build",
+			args: args{
+				ctx: context.Background(),
+				opt: &BuildOption{
+					HostURL:        "tcp://10.251.0.45:2375",
+					DockerFilePath: "./Dockerfile",
+					CtxPath:        "../example/ubuntu-test",
+					Tags:           []string{"test/ubuntu:20.04"},
+				}},
 		},
 	}
 	for _, tt := range tests {

@@ -46,11 +46,75 @@ func Test_Run(t *testing.T) {
 		checkOutput bool
 		output      string
 	}{
-		{args: args{image: tag, config: &RunOption{Image: tag, Cmd: []string{"./error.sh"}}}, exitNormal: false},
-		{args: args{image: tag, config: &RunOption{Image: tag, Cmd: []string{"./success.sh"}}}, exitNormal: true},
-		{name: "workdir-test", args: args{image: tag, config: &RunOption{Image: tag, WorkDir: "/etc/apt", Cmd: []string{"pwd"}}}, exitNormal: true, checkOutput: true, output: "/etc/apt"},
-		{name: "mount-test", args: args{image: tag, config: &RunOption{Image: tag, WorkDir: "/etc/apt", Cmd: []string{"ls", "/tmp"}, Mounts: map[string]string{mountTestPath: "/tmp"}}}, exitNormal: true, checkOutput: true, output: "data"},
-		{name: "host-url-test", args: args{image: tag, config: &RunOption{HostURL: dockerDURL, Image: tag, Cmd: []string{"uname"}}}, exitNormal: true, checkOutput: true, output: "Linux"},
+		{
+			args: args{
+				image: tag,
+				config: &RunOption{
+					Image: tag,
+					Cmd:   []string{"./error.sh"},
+				},
+			},
+			exitNormal: false,
+		},
+
+		{
+			args: args{
+				image: tag,
+				config: &RunOption{
+					Image: tag,
+					Cmd:   []string{"./success.sh"},
+				},
+			},
+			exitNormal: true,
+		},
+
+		{
+			name: "workdir-test",
+			args: args{
+				image: tag,
+				config: &RunOption{
+					Image:   tag,
+					WorkDir: "/etc/apt",
+					Cmd:     []string{"pwd"},
+				},
+			},
+			exitNormal:  true,
+			checkOutput: true,
+			output:      "/etc/apt",
+		},
+
+		{
+			name: "mount-test",
+			args: args{
+				image: tag,
+				config: &RunOption{
+					Image:   tag,
+					WorkDir: "/etc/apt",
+					Cmd:     []string{"ls", "/tmp"},
+					Mounts: map[string]string{
+						mountTestPath: "/tmp",
+					},
+				},
+			},
+			exitNormal:  true,
+			checkOutput: true,
+			output:      "data",
+		},
+
+		{
+			name: "host-url-test",
+			args: args{
+				image: tag,
+				config: &RunOption{
+					HostURL: dockerDURL,
+					Image:   tag,
+					Cmd:     []string{"uname"},
+				},
+			},
+			exitNormal:  true,
+			checkOutput: true,
+			output:      "Linux",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
