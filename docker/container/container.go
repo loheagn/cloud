@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/docker/docker/api/types"
@@ -15,6 +16,7 @@ type RunOption struct {
 	HostURL string
 	Image   string
 	Cmd     []string
+	Envs    map[string]string
 	WorkDir string
 	Mounts  map[string]string
 }
@@ -28,10 +30,16 @@ func Run(ctx context.Context, opt *RunOption, output io.Writer) (exitCode int, e
 	}
 
 	// 配置基本参数
+	// TODO: 参数核验
+	envs := make([]string, 0, len(opt.Envs))
+	for k, v := range opt.Envs {
+		envs = append(envs, fmt.Sprintf("%s=%s", k, v))
+	}
 	config := &container.Config{
 		Image:      opt.Image,
 		Cmd:        opt.Cmd,
 		WorkingDir: opt.WorkDir,
+		Env:        envs,
 	}
 	// 挂载目录
 	mounts := make([]mount.Mount, 0, len(opt.Mounts))

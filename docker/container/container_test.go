@@ -3,8 +3,10 @@ package container
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/loheagn/cloud/docker/image"
@@ -115,25 +117,36 @@ func Test_Run(t *testing.T) {
 			checkOutput: true,
 			output:      "Linux",
 		},
+
+		{
+			name: "env-test",
+			args: args{
+				image: tag,
+				config: &RunOption{
+					Image: tag,
+					Envs: map[string]string{
+						"CONTAINER_TEST_ENV": "test-env",
+					},
+					Cmd: []string{"bash", "-c", "echo $CONTAINER_TEST_ENV"},
+				},
+			},
+			exitNormal:  true,
+			checkOutput: true,
+			output:      "test-env",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			writer := &bytes.Buffer{}
 			exitCode, err := Run(context.TODO(), tt.args.config, writer)
+			write := strings.TrimSpace(fmt.Sprint(writer))
 			if (err != nil) == tt.wantErr && (exitCode == 0) == tt.exitNormal {
-				if !tt.checkOutput {
+				if !tt.checkOutput || reflect.DeepEqual(write, tt.output) {
 					return
 				}
-				bs := make([]byte, len(tt.output))
-				if _, err := writer.Read(bs); err != nil {
-					panic(err.Error())
-				}
-				if reflect.DeepEqual(string(bs), tt.output) {
-					return
-				}
-				t.Errorf("Run() writer = %s, wantOutput %s", string(bs), tt.output)
 			}
-			t.Log(writer)
+			t.Log(write)
+			t.Errorf("Run() writer = %s, wantOutput %s", write, tt.output)
 			t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
 			t.Errorf("Run() exitCode = %v, exitNormal %v", exitCode, tt.exitNormal)
 		})
