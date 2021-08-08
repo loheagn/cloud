@@ -6,7 +6,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
-	"github.com/loheagn/cloud/docker"
+	"github.com/loheagn/loclo/docker"
 )
 
 type BuildOption struct {

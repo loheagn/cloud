@@ -1,4 +1,4 @@
-module github.com/loheagn/cloud
+module github.com/loheagn/loclo
 
 go 1.16
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/loheagn/cloud/docker/image"
+	"github.com/loheagn/loclo/docker/image"
 )
 
 func Test_Run(t *testing.T) {
