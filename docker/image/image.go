@@ -16,12 +16,12 @@ type BuildOption struct {
 	Tags           []string
 }
 
-func Build(ctx context.Context, opt *BuildOption, output io.Writer) error {
+func Build(ctx context.Context, opt *BuildOption) (io.ReadCloser, error) {
 	cli, err := docker.GetClient(&docker.InitOption{
 		Host: opt.HostURL,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	buildOpts := types.ImageBuildOptions{
 		Dockerfile: opt.DockerFilePath,
@@ -31,10 +31,8 @@ func Build(ctx context.Context, opt *BuildOption, output io.Writer) error {
 
 	resp, err := cli.ImageBuild(ctx, buildCtx, buildOpts)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer resp.Body.Close()
 
-	_, err = io.Copy(output, resp.Body)
-	return err
+	return resp.Body, err
 }

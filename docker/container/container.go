@@ -1,9 +1,9 @@
 package container
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -21,12 +21,12 @@ type RunOption struct {
 	Mounts  map[string]string
 }
 
-func Run(ctx context.Context, opt *RunOption, output io.Writer) (exitCode int, err error) {
+func Run(ctx context.Context, opt *RunOption) (output string, exitCode int, err error) {
 	cli, err := docker.GetClient(&docker.InitOption{
 		Host: opt.HostURL,
 	})
 	if err != nil {
-		return 1, err
+		return "", 1, err
 	}
 
 	// 配置基本参数
@@ -56,7 +56,7 @@ func Run(ctx context.Context, opt *RunOption, output io.Writer) (exitCode int, e
 
 	resp, err := cli.ContainerCreate(ctx, config, hostConfig, nil, nil, "")
 	if err != nil {
-		return 1, err
+		return "", 1, err
 	}
 
 	// 保证最后将容器移除
@@ -65,28 +65,32 @@ func Run(ctx context.Context, opt *RunOption, output io.Writer) (exitCode int, e
 	}()
 
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		return 1, err
+		return "", 1, err
 	}
 
 	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errCh:
 		if err != nil {
-			return 1, err
+			return "", 1, err
 		}
 	case <-statusCh:
 	}
 
 	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
 	if err != nil {
-		return 1, err
+		return "", 1, err
 	}
 
-	_, err = stdcopy.StdCopy(output, output, out)
+	var writer = &bytes.Buffer{}
+	_, err = stdcopy.StdCopy(writer, writer, out)
 	if err != nil {
-		return 1, err
+		return "", 1, err
 	}
 
 	status, err := cli.ContainerInspect(ctx, resp.ID)
-	return status.State.ExitCode, err
+	if err != nil {
+		return "", 1, err
+	}
+	return writer.String(), status.State.ExitCode, err
 }

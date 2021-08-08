@@ -1,11 +1,8 @@
 package container
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -26,14 +23,14 @@ func Test_Run(t *testing.T) {
 		CtxPath:        "../example/ubuntu-test",
 		Tags:           []string{tag},
 	}
-	_ = image.Build(context.Background(), remoteBuildOpt, &bytes.Buffer{})
+	_, _ = image.Build(context.Background(), remoteBuildOpt)
 
 	envBuildOpt := &image.BuildOption{
 		DockerFilePath: "./Dockerfile",
 		CtxPath:        "../example/ubuntu-test",
 		Tags:           []string{tag},
 	}
-	_ = image.Build(context.Background(), envBuildOpt, &bytes.Buffer{})
+	_, _ = image.Build(context.Background(), envBuildOpt)
 
 	type args struct {
 		image  string
@@ -137,16 +134,14 @@ func Test_Run(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			writer := &bytes.Buffer{}
-			exitCode, err := Run(context.TODO(), tt.args.config, writer)
-			write := strings.TrimSpace(fmt.Sprint(writer))
+			output, exitCode, err := Run(context.TODO(), tt.args.config)
 			if (err != nil) == tt.wantErr && (exitCode == 0) == tt.exitNormal {
-				if !tt.checkOutput || reflect.DeepEqual(write, tt.output) {
+				if !tt.checkOutput || (output == tt.output || strings.TrimSpace(output) == tt.output) {
 					return
 				}
+				t.Errorf("Run() writer = %s, wantOutput %s", output, tt.output)
 			}
-			t.Log(write)
-			t.Errorf("Run() writer = %s, wantOutput %s", write, tt.output)
+			t.Log(output)
 			t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
 			t.Errorf("Run() exitCode = %v, exitNormal %v", exitCode, tt.exitNormal)
 		})

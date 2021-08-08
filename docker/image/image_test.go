@@ -1,7 +1,6 @@
 package image
 
 import (
-	"bytes"
 	"context"
 	"testing"
 )
@@ -42,8 +41,7 @@ func TestBuild(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output := &bytes.Buffer{}
-			if err := Build(tt.args.ctx, tt.args.opt, output); (err != nil) != tt.wantErr {
+			if _, err := Build(tt.args.ctx, tt.args.opt); (err != nil) != tt.wantErr {
 				t.Errorf("Build() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
