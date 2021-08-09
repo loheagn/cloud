@@ -13,12 +13,13 @@ import (
 )
 
 type RunOption struct {
-	HostURL string
-	Image   string
-	Cmd     []string
-	Envs    map[string]string
-	WorkDir string
-	Mounts  map[string]string
+	HostURL   string
+	Image     string
+	Cmd       []string
+	Envs      map[string]string
+	WorkDir   string
+	Mounts    map[string]string
+	Resources *container.Resources
 }
 
 func Run(ctx context.Context, opt *RunOption) (output string, exitCode int, err error) {
@@ -51,7 +52,8 @@ func Run(ctx context.Context, opt *RunOption) (output string, exitCode int, err 
 		})
 	}
 	hostConfig := &container.HostConfig{
-		Mounts: mounts,
+		Mounts:    mounts,
+		Resources: *opt.Resources,
 	}
 
 	resp, err := cli.ContainerCreate(ctx, config, hostConfig, nil, nil, "")
