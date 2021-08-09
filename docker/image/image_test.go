@@ -24,7 +24,19 @@ func TestBuild(t *testing.T) {
 					DockerFilePath: "./Dockerfile",
 					CtxPath:        "../example/ubuntu-test",
 					Tags:           []string{"test/ubuntu:20.04"},
-				}},
+				},
+			},
+		},
+		{
+			name: "local-build-path-test",
+			args: args{
+				ctx: context.Background(),
+				opt: &BuildOption{
+					DockerFilePath: "./ubuntu-test//Dockerfile",
+					CtxPath:        "../example/",
+					Tags:           []string{"test/ubuntu:20.04"},
+				},
+			},
 		},
 
 		{
