@@ -2,6 +2,7 @@ package image
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 )
 
@@ -10,6 +11,15 @@ func TestBuild(t *testing.T) {
 		ctx context.Context
 		opt *BuildOption
 	}
+	dockerfileAbsPath, err := filepath.Abs(filepath.Join("../example/ubuntu-test", "./Dockerfile"))
+	if err != nil {
+		panic(err.Error())
+	}
+	ctxAbsPath, err := filepath.Abs("../example/ubuntu-test")
+	if err != nil {
+		panic(err.Error())
+	}
+
 	tests := []struct {
 		name        string
 		args        args
@@ -28,11 +38,34 @@ func TestBuild(t *testing.T) {
 			},
 		},
 		{
+			name: "local-build-dockerfile-abspath",
+			args: args{
+				ctx: context.Background(),
+				opt: &BuildOption{
+					DockerFilePath: dockerfileAbsPath,
+					CtxPath:        "../example/ubuntu-test",
+					Tags:           []string{"test/ubuntu:20.04"},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "local-build-context-abspath",
+			args: args{
+				ctx: context.Background(),
+				opt: &BuildOption{
+					DockerFilePath: "./Dockerfile",
+					CtxPath:        ctxAbsPath,
+					Tags:           []string{"test/ubuntu:20.04"},
+				},
+			},
+		},
+		{
 			name: "local-build-path-test",
 			args: args{
 				ctx: context.Background(),
 				opt: &BuildOption{
-					DockerFilePath: "./ubuntu-test//Dockerfile",
+					DockerFilePath: "./ubuntu-test/Dockerfile",
 					CtxPath:        "../example/",
 					Tags:           []string{"test/ubuntu:20.04"},
 				},
