@@ -3,6 +3,7 @@ module github.com/loheagn/loclo
 go 1.16
 
 require (
+	code.cloudfoundry.org/bytefmt v0.0.0-20210608160410-67692ebc98de // indirect
 	github.com/Microsoft/hcsshim v0.8.17 // indirect
 	github.com/containerd/containerd v1.5.2 // indirect
 	github.com/docker/docker v20.10.7+incompatible

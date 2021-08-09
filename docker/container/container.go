@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"code.cloudfoundry.org/bytefmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -13,13 +14,17 @@ import (
 )
 
 type RunOption struct {
-	HostURL   string
-	Image     string
-	Cmd       []string
-	Envs      map[string]string
-	WorkDir   string
-	Mounts    map[string]string
-	Resources *container.Resources
+	HostURL string
+	Image   string
+	Cmd     []string
+	Envs    map[string]string
+	WorkDir string
+	Mounts  map[string]string
+	Resources
+}
+
+type Resources struct {
+	Memory string
 }
 
 func Run(ctx context.Context, opt *RunOption) (output string, exitCode int, err error) {
@@ -51,9 +56,17 @@ func Run(ctx context.Context, opt *RunOption) (output string, exitCode int, err 
 			Target: target,
 		})
 	}
+	// 处理 Resources
+	memBytes, err := bytefmt.ToBytes(opt.Memory)
+	if err != nil {
+		return
+	}
+	res := container.Resources{
+		Memory: int64(memBytes),
+	}
 	hostConfig := &container.HostConfig{
 		Mounts:    mounts,
-		Resources: *opt.Resources,
+		Resources: res,
 	}
 
 	resp, err := cli.ContainerCreate(ctx, config, hostConfig, nil, nil, "")
