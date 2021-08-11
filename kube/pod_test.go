@@ -10,6 +10,7 @@ func TestPodDeploy(t *testing.T) {
 		ctx context.Context
 		opt *PodDeployOpt
 	}
+	timeS := "2021-8-11-99"
 	tests := []struct {
 		name    string
 		args    args
@@ -23,14 +24,15 @@ func TestPodDeploy(t *testing.T) {
 					KubeConfPath: "",
 					Labels: map[string]string{
 						"simple": "test",
+						"time":   timeS,
 					},
-					ReplicaNum: 0,
+					ReplicaNum: 5,
 					Stateful:   false,
 					Namespace:  "",
 					Duration:   0,
 					spec: PodSpec{
 						Name:     "simple-test",
-						ImageTag: "nginx:1.17",
+						ImageTag: "harbor.scs.buaa.edu.cn/library/nginx:1.17",
 						Envs:     nil,
 						Ports: []Port{
 							{
@@ -42,7 +44,8 @@ func TestPodDeploy(t *testing.T) {
 						Cmd:     Cmd{},
 						Labels: map[string]string{
 							"simple": "test",
-							"inner":  "pod",
+							"inner":  "pod56",
+							"time":   timeS,
 						},
 					},
 				},

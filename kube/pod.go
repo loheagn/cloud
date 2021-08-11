@@ -7,6 +7,14 @@ import (
 	"time"
 
 	apiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	watch2 "k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/watch"
 )
 
 const (
@@ -43,6 +51,16 @@ func (opt *PodDeployOpt) fix() {
 	}
 }
 
+type ErrPodDeploy struct {
+	Msg string
+}
+
+func (err *ErrPodDeploy) Error() string {
+	return err.Msg
+}
+
+var ErrPodDeployTimeout = &ErrPodDeploy{Msg: "timeout"}
+
 func PodDeploy(ctx context.Context, opt *PodDeployOpt) (err error) {
 	opt.fix()
 	ctx, cancel := context.WithTimeout(ctx, opt.Duration)
@@ -61,22 +79,105 @@ func PodDeploy(ctx context.Context, opt *PodDeployOpt) (err error) {
 		if err != nil {
 			return
 		}
-		switch opt.Stateful {
-		case false:
-			err = deploymentDeploy(ctx, container, clientSet, &DeployOpt{
-				Name:       opt.spec.Name,
-				Labels:     opt.Labels,
-				ReplicaNum: opt.ReplicaNum,
-			})
+
+		deployOpt := &DeployOpt{
+			Name:       opt.spec.Name,
+			Labels:     opt.Labels,
+			ReplicaNum: opt.ReplicaNum,
+			Namespace:  opt.Namespace,
+			PodLabels:  opt.spec.Labels,
 		}
+		var controller PodController
+
+		if opt.Stateful {
+			controller = NewStatefulSetController(container, clientSet, deployOpt)
+		} else {
+			controller = NewDeploymentController(container, clientSet, deployOpt)
+		}
+
+		// deploy
+		err = controller.DeployOrUpdate(ctx)
+		if err != nil {
+			return
+		}
+		// wait pod for done
+		//errMsg, err = waitPodsForRunning(ctx, clientSet, opt.Namespace, opt.spec.Labels)
+		return
 	}()
 
 	select {
 	case <-ctx.Done():
-		err = ctx.Err()
+		err = ErrPodDeployTimeout
 	case err = <-errCh:
 	}
 	return
+}
+
+func waitPodForReady(ctx context.Context, client *kubernetes.Clientset, namespace string, labels map[string]string) (errMsg string, err error) {
+	listOpt, err := getListOpt(labels)
+	if err != nil {
+		return err.Error(), err
+	}
+	condition := func(event watch2.Event) (bool, error) {
+		pod, ok := event.Object.(*v1.Pod)
+		if !ok {
+			return false, nil
+		}
+		switch pod.Status.Phase {
+		case apiv1.PodRunning, apiv1.PodSucceeded:
+			return true, nil
+		case apiv1.PodFailed:
+			errMsg = pod.Status.Message
+			return false, nil
+		default:
+			return false, nil
+		}
+	}
+	client.CoreV1().Pods(namespace).GetLogs(namespace, &v1.PodLogOptions{
+		TypeMeta:                     metav1.TypeMeta{},
+		Container:                    "",
+		Follow:                       false,
+		Previous:                     false,
+		SinceSeconds:                 nil,
+		SinceTime:                    nil,
+		Timestamps:                   false,
+		TailLines:                    nil,
+		LimitBytes:                   nil,
+		InsecureSkipTLSVerifyBackend: false,
+	})
+	lw := &cache.ListWatch{
+		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+			return client.CoreV1().Pods(namespace).List(ctx, *listOpt)
+		},
+		WatchFunc: func(options metav1.ListOptions) (watch2.Interface, error) {
+			return client.CoreV1().Pods(namespace).Watch(ctx, *listOpt)
+		},
+	}
+
+	watcher, err := watch.NewRetryWatcher("1", lw)
+	if err != nil {
+		return
+	}
+	ch := watcher.ResultChan()
+	for {
+		select {
+		case event, ok := <-ch:
+			if !ok {
+				err = watch.ErrWatchClosed
+				return
+			}
+			if ok, err := condition(event); err != nil {
+				return err.Error(), err
+			} else if ok {
+				return errMsg, nil
+			}
+		case <-ctx.Done():
+			err = ErrPodDeployTimeout
+			return
+		}
+	}
+	//_, err = watch.Until(ctx, "1", lw, condition)
+	//return
 }
 
 func getContainer(spec PodSpec) *apiv1.Container {
@@ -147,4 +248,22 @@ func getContainerPorts(dbPorts []Port) []apiv1.ContainerPort {
 	return ports
 }
 
-//func waitPodForRunning(ctx context.Context)
+func listPodsByLabels(ctx context.Context, client *kubernetes.Clientset, labels map[string]string, namespace string) ([]v1.Pod, error) {
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: labels,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return listPodsBySelector(ctx, client, selector, namespace)
+}
+
+func listPodsBySelector(ctx context.Context, client *kubernetes.Clientset, selector labels.Selector, namespace string) ([]v1.Pod, error) {
+	podList, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: selector.String(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return podList.Items, nil
+}

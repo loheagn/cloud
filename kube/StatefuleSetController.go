@@ -12,19 +12,19 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-type DeploymentController struct {
+type StatefulSetController struct {
 	Client *kubernetes.Clientset
-	DCli   v1.DeploymentInterface
-	D      *appsv1.Deployment
+	SCli   v1.StatefulSetInterface
+	S      *appsv1.StatefulSet
 }
 
-func NewDeploymentController(container *apiv1.Container, client *kubernetes.Clientset, opt *DeployOpt) DeploymentController {
-	deployment := &appsv1.Deployment{
+func NewStatefulSetController(container *apiv1.Container, client *kubernetes.Clientset, opt *DeployOpt) StatefulSetController {
+	deployment := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   opt.Name,
 			Labels: opt.Labels,
 		},
-		Spec: appsv1.DeploymentSpec{
+		Spec: appsv1.StatefulSetSpec{
 			Replicas: &opt.ReplicaNum,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: opt.PodLabels,
@@ -41,61 +41,56 @@ func NewDeploymentController(container *apiv1.Container, client *kubernetes.Clie
 			},
 		},
 	}
-	return DeploymentController{
+	return StatefulSetController{
 		Client: client,
-		D:      deployment,
-		DCli:   client.AppsV1().Deployments(opt.Namespace),
+		S:      deployment,
+		SCli:   client.AppsV1().StatefulSets(opt.Namespace),
 	}
 }
 
-func (d DeploymentController) DeployOrUpdate(ctx context.Context) (err error) {
+func (s StatefulSetController) DeployOrUpdate(ctx context.Context) (err error) {
 	// 看看之前部署的deployment还存不存在
-	exists, err := d.Exists(ctx)
+	exists, err := s.Exists(ctx)
 	if err != nil {
 		return
 	}
 	if !exists {
 		// create
-		result, err := d.DCli.Create(ctx, d.D, metav1.CreateOptions{})
+		result, err := s.SCli.Create(ctx, s.S, metav1.CreateOptions{})
 		if err != nil {
 			return err
 		}
-		d.D = result
+		s.S = result
 		return err
 	}
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		preRe, err := d.DCli.Get(ctx, d.D.Name, metav1.GetOptions{})
+		result, err := s.SCli.Update(ctx, s.S, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
-		d.D.Spec.Selector = preRe.Spec.Selector
-		result, err := d.DCli.Update(ctx, d.D, metav1.UpdateOptions{})
-		if err != nil {
-			return err
-		}
-		d.D = result
+		s.S = result
 		return nil
 	})
 	return retryErr
 }
 
-func (d DeploymentController) GetPods(ctx context.Context) ([]apiv1.Pod, error) {
-	labels, err := metav1.LabelSelectorAsMap(d.D.Spec.Selector)
+func (s StatefulSetController) GetPods(ctx context.Context) ([]apiv1.Pod, error) {
+	labels, err := metav1.LabelSelectorAsMap(s.S.Spec.Selector)
 	if err != nil {
 		return nil, err
 	}
-	return listPodsByLabels(ctx, d.Client, labels, d.D.Namespace)
+	return listPodsByLabels(ctx, s.Client, labels, s.S.Namespace)
 }
 
-func (d DeploymentController) Delete(ctx context.Context) error {
+func (s StatefulSetController) Delete(ctx context.Context) error {
 	deletePolicy := metav1.DeletePropagationForeground
-	return d.DCli.Delete(ctx, d.D.Name, metav1.DeleteOptions{
+	return s.SCli.Delete(ctx, s.S.Name, metav1.DeleteOptions{
 		PropagationPolicy: &deletePolicy,
 	})
 }
 
-func (d DeploymentController) Exists(ctx context.Context) (bool, error) {
-	_, err := d.DCli.Get(ctx, d.D.Name, metav1.GetOptions{})
+func (s StatefulSetController) Exists(ctx context.Context) (bool, error) {
+	_, err := s.SCli.Get(ctx, s.S.Name, metav1.GetOptions{})
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			return false, nil
