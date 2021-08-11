@@ -27,7 +27,7 @@ func NewDeploymentController(container *apiv1.Container, client *kubernetes.Clie
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &opt.ReplicaNum,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: opt.PodLabels,
+				MatchLabels: opt.Labels,
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -64,11 +64,6 @@ func (d DeploymentController) DeployOrUpdate(ctx context.Context) (err error) {
 		return err
 	}
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		preRe, err := d.DCli.Get(ctx, d.D.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		d.D.Spec.Selector = preRe.Spec.Selector
 		result, err := d.DCli.Update(ctx, d.D, metav1.UpdateOptions{})
 		if err != nil {
 			return err

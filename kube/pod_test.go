@@ -26,6 +26,9 @@ func TestPodDeploy(t *testing.T) {
 						"simple": "test",
 						"time":   timeS,
 					},
+					extraLabels: map[string]string{
+						"inner": "pod56",
+					},
 					ReplicaNum: 5,
 					Stateful:   false,
 					Namespace:  "",
@@ -42,11 +45,6 @@ func TestPodDeploy(t *testing.T) {
 						},
 						WorkDir: "",
 						Cmd:     Cmd{},
-						Labels: map[string]string{
-							"simple": "test",
-							"inner":  "pod56",
-							"time":   timeS,
-						},
 					},
 				},
 			},

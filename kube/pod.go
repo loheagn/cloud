@@ -25,6 +25,7 @@ const (
 type PodDeployOpt struct {
 	KubeConfPath string
 	Labels       map[string]string
+	extraLabels  map[string]string
 	ReplicaNum   int32
 	Stateful     bool
 	Namespace    string
@@ -39,7 +40,7 @@ type PodSpec struct {
 	Ports    []Port
 	WorkDir  string
 	Cmd      Cmd
-	Labels   map[string]string
+	labels   map[string]string
 }
 
 func (opt *PodDeployOpt) fix() {
@@ -49,6 +50,16 @@ func (opt *PodDeployOpt) fix() {
 	if len(opt.Namespace) <= 0 {
 		opt.Namespace = DefaultNameSpace
 	}
+
+	// generate pod labels
+	podLabels := make(map[string]string)
+	for k, v := range opt.Labels {
+		podLabels[k] = v
+	}
+	for k, v := range opt.extraLabels {
+		podLabels[k] = v
+	}
+	opt.spec.labels = podLabels
 }
 
 type ErrPodDeploy struct {
@@ -85,7 +96,7 @@ func PodDeploy(ctx context.Context, opt *PodDeployOpt) (err error) {
 			Labels:     opt.Labels,
 			ReplicaNum: opt.ReplicaNum,
 			Namespace:  opt.Namespace,
-			PodLabels:  opt.spec.Labels,
+			PodLabels:  opt.spec.labels,
 		}
 		var controller PodController
 
@@ -101,7 +112,7 @@ func PodDeploy(ctx context.Context, opt *PodDeployOpt) (err error) {
 			return
 		}
 		// wait pod for done
-		//errMsg, err = waitPodsForRunning(ctx, clientSet, opt.Namespace, opt.spec.Labels)
+		//errMsg, err = waitPodsForRunning(ctx, clientSet, opt.Namespace, opt.spec.labels)
 		return
 	}()
 
