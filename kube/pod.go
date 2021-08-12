@@ -8,7 +8,6 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -16,11 +15,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/watch"
-)
-
-const (
-	DefaultDuration  = 10 * time.Minute
-	DefaultNameSpace = "default"
 )
 
 type PodDeployOpt struct {
@@ -229,20 +223,9 @@ func getContainer(spec PodSpec) (*apiv1.Container, error) {
 	}
 
 	// quota
-	resourceList := make(map[v1.ResourceName]resource.Quantity)
-	if len(spec.CPU) > 0 {
-		quantity, err := resource.ParseQuantity(spec.CPU)
-		if err != nil {
-			return nil, err
-		}
-		resourceList[v1.ResourceCPU] = quantity
-	}
-	if len(spec.Memory) > 0 {
-		quantity, err := resource.ParseQuantity(spec.Memory)
-		if err != nil {
-			return nil, err
-		}
-		resourceList[v1.ResourceMemory] = quantity
+	resourceList, err := spec.Quota.convertResourceList()
+	if err != nil {
+		return nil, err
 	}
 	if len(resourceList) > 0 {
 		container.Resources.Limits = resourceList

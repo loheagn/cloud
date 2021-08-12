@@ -13,7 +13,12 @@ import (
 type Client struct {
 	*kubernetes.Clientset
 	Ctx       context.Context
-	NameSpace string
+	namespace string
+}
+
+type CreateClientOpt struct {
+	ConfigPath string
+	Namespace  string
 }
 
 func client(confPath string) (*kubernetes.Clientset, error) {
@@ -29,39 +34,18 @@ func client(confPath string) (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(config)
 }
 
-func mustClient(confPath string) *kubernetes.Clientset {
-	if confPath == "" {
-		confPath = filepath.Join(homedir.HomeDir(), ".kube/config")
-	} else {
-		confPath, _ = filepath.Abs(confPath)
-	}
-	config, err := clientcmd.BuildConfigFromFlags("", confPath)
-	if err != nil {
-		panic(err.Error())
-	}
-	clientSet, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err.Error())
-	}
-	return clientSet
-}
-
-func NewClient(ctx context.Context, configPath, namespace string) (*Client, error) {
-	clientSet, err := client(configPath)
+func NewClient(ctx context.Context, opt *CreateClientOpt) (*Client, error) {
+	clientSet, err := client(opt.ConfigPath)
 	if err != nil {
 		return nil, err
+	}
+	if len(opt.Namespace) <= 0 {
+		opt.Namespace = DefaultNameSpace
 	}
 	return &Client{
 		Clientset: clientSet,
 		Ctx:       ctx,
-		NameSpace: namespace,
+		namespace: opt.Namespace,
 	}, nil
-}
 
-func MustNewClient(ctx context.Context, configPath, namespace string) *Client {
-	return &Client{
-		Clientset: mustClient(configPath),
-		Ctx:       ctx,
-		NameSpace: namespace,
-	}
 }
