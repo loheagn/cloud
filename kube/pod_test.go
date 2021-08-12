@@ -45,6 +45,10 @@ func TestPodDeploy(t *testing.T) {
 						},
 						WorkDir: "",
 						Cmd:     Cmd{},
+						Quota: Quota{
+							CPU:    "1",
+							Memory: "2G",
+						},
 					},
 				},
 			},

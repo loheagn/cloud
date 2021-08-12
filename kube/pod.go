@@ -8,6 +8,7 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,6 +42,7 @@ type PodSpec struct {
 	WorkDir  string
 	Cmd      Cmd
 	labels   map[string]string
+	Quota
 }
 
 func (opt *PodDeployOpt) fix() {
@@ -77,7 +79,10 @@ func PodDeploy(ctx context.Context, opt *PodDeployOpt) (err error) {
 	ctx, cancel := context.WithTimeout(ctx, opt.Duration)
 	defer cancel()
 
-	container := getContainer(opt.spec)
+	container, err := getContainer(opt.spec)
+	if err != nil {
+		return
+	}
 
 	errCh := make(chan error)
 
@@ -191,7 +196,7 @@ func waitPodForReady(ctx context.Context, client *kubernetes.Clientset, namespac
 	//return
 }
 
-func getContainer(spec PodSpec) *apiv1.Container {
+func getContainer(spec PodSpec) (*apiv1.Container, error) {
 	container := &apiv1.Container{
 		Name:  spec.Name,
 		Image: spec.ImageTag,
@@ -223,8 +228,29 @@ func getContainer(spec PodSpec) *apiv1.Container {
 		container.Args = spec.Cmd.Args
 	}
 
+	// quota
+	resourceList := make(map[v1.ResourceName]resource.Quantity)
+	if len(spec.CPU) > 0 {
+		quantity, err := resource.ParseQuantity(spec.CPU)
+		if err != nil {
+			return nil, err
+		}
+		resourceList[v1.ResourceCPU] = quantity
+	}
+	if len(spec.Memory) > 0 {
+		quantity, err := resource.ParseQuantity(spec.Memory)
+		if err != nil {
+			return nil, err
+		}
+		resourceList[v1.ResourceMemory] = quantity
+	}
+	if len(resourceList) > 0 {
+		container.Resources.Limits = resourceList
+		container.Resources.Requests = resourceList
+	}
+
 	// TODO: 持久化
-	return container
+	return container, nil
 }
 
 func getContainerPorts(dbPorts []Port) []apiv1.ContainerPort {

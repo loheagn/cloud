@@ -25,6 +25,11 @@ type Cmd struct {
 	Args    []string
 }
 
+type Quota struct {
+	CPU    string
+	Memory string
+}
+
 type PodController interface {
 	DeployOrUpdate(ctx context.Context) error
 	GetPods(ctx context.Context) ([]v1.Pod, error)
