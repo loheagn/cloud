@@ -1,6 +1,8 @@
 package kube
 
 import (
+	"encoding/base64"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -23,4 +25,8 @@ func getListOpt(labels map[string]string) (*metav1.ListOptions, error) {
 
 func (p PullPolicy) official() v1.PullPolicy {
 	return v1.PullPolicy(p)
+}
+
+func base64EncodeString(src []byte) string {
+	return base64.StdEncoding.EncodeToString(src)
 }
