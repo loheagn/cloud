@@ -10,6 +10,13 @@ func TestPodDeploy(t *testing.T) {
 		ctx context.Context
 		opt *PodDeployOpt
 	}
+	cli, err := NewClient(context.Background(), &CreateClientOpt{
+		ConfigPath: "",
+		Namespace:  "default",
+	})
+	if err != nil {
+		panic(err.Error())
+	}
 	timeS := "2021-8-11-99"
 	tests := []struct {
 		name    string
@@ -21,7 +28,6 @@ func TestPodDeploy(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				opt: &PodDeployOpt{
-					KubeConfPath: "",
 					Labels: map[string]string{
 						"simple": "test",
 						"time":   timeS,
@@ -31,7 +37,6 @@ func TestPodDeploy(t *testing.T) {
 					},
 					ReplicaNum: 5,
 					Stateful:   false,
-					Namespace:  "",
 					Duration:   0,
 					spec: PodSpec{
 						Name:     "simple-test",
@@ -56,7 +61,7 @@ func TestPodDeploy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := PodDeploy(tt.args.ctx, tt.args.opt); (err != nil) != tt.wantErr {
+			if err := cli.PodDeploy(tt.args.ctx, tt.args.opt); (err != nil) != tt.wantErr {
 				t.Errorf("PodDeploy() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

@@ -18,14 +18,12 @@ import (
 )
 
 type PodDeployOpt struct {
-	KubeConfPath string
-	Labels       map[string]string
-	extraLabels  map[string]string
-	ReplicaNum   int32
-	Stateful     bool
-	Namespace    string
-	Duration     time.Duration
-	spec         PodSpec
+	Labels      map[string]string
+	extraLabels map[string]string
+	ReplicaNum  int32
+	Stateful    bool
+	Duration    time.Duration
+	spec        PodSpec
 }
 
 type PodSpec struct {
@@ -43,9 +41,6 @@ type PodSpec struct {
 func (opt *PodDeployOpt) fix() {
 	if opt.Duration <= 0 {
 		opt.Duration = DefaultDuration
-	}
-	if len(opt.Namespace) <= 0 {
-		opt.Namespace = DefaultNameSpace
 	}
 
 	// generate pod labels
@@ -73,7 +68,7 @@ func (err *ErrPodDeploy) Error() string {
 
 var ErrPodDeployTimeout = &ErrPodDeploy{Msg: "timeout"}
 
-func PodDeploy(ctx context.Context, opt *PodDeployOpt) (err error) {
+func (cli *Client) PodDeploy(ctx context.Context, opt *PodDeployOpt) (err error) {
 	opt.fix()
 	ctx, cancel := context.WithTimeout(ctx, opt.Duration)
 	defer cancel()
@@ -90,24 +85,20 @@ func PodDeploy(ctx context.Context, opt *PodDeployOpt) (err error) {
 		defer func() {
 			errCh <- err
 		}()
-		clientSet, err := client(opt.KubeConfPath)
-		if err != nil {
-			return
-		}
 
 		deployOpt := &DeployOpt{
 			Name:       opt.spec.Name,
 			Labels:     opt.Labels,
 			ReplicaNum: opt.ReplicaNum,
-			Namespace:  opt.Namespace,
+			Namespace:  cli.namespace,
 			PodLabels:  opt.spec.labels,
 		}
 		var controller PodController
 
 		if opt.Stateful {
-			controller = NewStatefulSetController(container, clientSet, deployOpt)
+			controller = NewStatefulSetController(container, cli.Clientset, deployOpt)
 		} else {
-			controller = NewDeploymentController(container, clientSet, deployOpt)
+			controller = NewDeploymentController(container, cli.Clientset, deployOpt)
 		}
 
 		// deploy
