@@ -1,6 +1,7 @@
 package kube
 
 import (
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -18,4 +19,8 @@ func getListOpt(labels map[string]string) (*metav1.ListOptions, error) {
 	return &metav1.ListOptions{
 		LabelSelector: selector.String(),
 	}, nil
+}
+
+func (p PullPolicy) official() v1.PullPolicy {
+	return v1.PullPolicy(p)
 }

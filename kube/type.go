@@ -12,6 +12,21 @@ const (
 	DefaultNameSpace = "default"
 )
 
+// PullPolicy describes a policy for if/when to pull a container image
+type PullPolicy string
+
+const (
+	// PullAlways means that kubelet always attempts to pull the latest image. Container will fail If the pull fails.
+	PullAlways PullPolicy = "Always"
+	// PullNever means that kubelet never pulls an image, but only uses a local image. Container will fail if the image isn't present
+	PullNever PullPolicy = "Never"
+	// PullIfNotPresent means that kubelet pulls if the image isn't present on disk. Container will fail if the image isn't present and the pull fails.
+	PullIfNotPresent PullPolicy = "IfNotPresent"
+)
+
+type AuthConfig struct {
+}
+
 type DeployOpt struct {
 	Name       string
 	Labels     map[string]string

@@ -29,13 +29,14 @@ type PodDeployOpt struct {
 }
 
 type PodSpec struct {
-	Name     string
-	ImageTag string
-	Envs     map[string]string
-	Ports    []Port
-	WorkDir  string
-	Cmd      Cmd
-	labels   map[string]string
+	Name       string
+	ImageTag   string
+	Envs       map[string]string
+	Ports      []Port
+	WorkDir    string
+	Cmd        Cmd
+	labels     map[string]string
+	PullPolicy PullPolicy
 	Quota
 }
 
@@ -56,6 +57,10 @@ func (opt *PodDeployOpt) fix() {
 		podLabels[k] = v
 	}
 	opt.spec.labels = podLabels
+
+	if len(opt.spec.PullPolicy) <= 0 {
+		opt.spec.PullPolicy = PullIfNotPresent
+	}
 }
 
 type ErrPodDeploy struct {
@@ -192,8 +197,9 @@ func waitPodForReady(ctx context.Context, client *kubernetes.Clientset, namespac
 
 func getContainer(spec PodSpec) (*apiv1.Container, error) {
 	container := &apiv1.Container{
-		Name:  spec.Name,
-		Image: spec.ImageTag,
+		Name:            spec.Name,
+		Image:           spec.ImageTag,
+		ImagePullPolicy: spec.PullPolicy.official(),
 	}
 
 	// 端口
