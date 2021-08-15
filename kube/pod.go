@@ -18,12 +18,13 @@ import (
 )
 
 type PodDeployOpt struct {
-	Labels      map[string]string
-	extraLabels map[string]string
-	ReplicaNum  int32
-	Stateful    bool
-	Duration    time.Duration
-	spec        PodSpec
+	Labels               map[string]string
+	extraLabels          map[string]string
+	ReplicaNum           int32
+	Stateful             bool
+	Duration             time.Duration
+	DockerRegistrySecret string
+	spec                 PodSpec
 }
 
 type PodSpec struct {
@@ -93,8 +94,11 @@ func (cli *Client) PodDeploy(ctx context.Context, opt *PodDeployOpt) (err error)
 			Namespace:  cli.namespace,
 			PodLabels:  opt.spec.labels,
 		}
-		var controller PodController
+		if len(opt.DockerRegistrySecret) > 0 {
+			deployOpt.ImagePullSecrets = append(deployOpt.ImagePullSecrets, v1.LocalObjectReference{Name: opt.DockerRegistrySecret})
+		}
 
+		var controller PodController
 		if opt.Stateful {
 			controller = NewStatefulSetController(container, cli.Clientset, deployOpt)
 		} else {

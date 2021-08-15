@@ -37,6 +37,7 @@ func NewDeploymentController(container *apiv1.Container, client *kubernetes.Clie
 					Containers: []apiv1.Container{
 						*container,
 					},
+					ImagePullSecrets: opt.ImagePullSecrets,
 				},
 			},
 		},

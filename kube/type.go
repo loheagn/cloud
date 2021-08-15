@@ -28,11 +28,12 @@ type AuthConfig struct {
 }
 
 type DeployOpt struct {
-	Name       string
-	Labels     map[string]string
-	ReplicaNum int32
-	Namespace  string
-	PodLabels  map[string]string
+	Name             string
+	Labels           map[string]string
+	ReplicaNum       int32
+	Namespace        string
+	PodLabels        map[string]string
+	ImagePullSecrets []v1.LocalObjectReference
 }
 
 type Port struct {

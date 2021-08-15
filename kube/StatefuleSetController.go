@@ -37,6 +37,7 @@ func NewStatefulSetController(container *apiv1.Container, client *kubernetes.Cli
 					Containers: []apiv1.Container{
 						*container,
 					},
+					ImagePullSecrets: opt.ImagePullSecrets,
 				},
 			},
 		},
