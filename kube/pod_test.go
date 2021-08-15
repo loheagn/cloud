@@ -32,13 +32,13 @@ func TestPodDeploy(t *testing.T) {
 						"simple": "test",
 						"time":   timeS,
 					},
-					extraLabels: map[string]string{
+					ExtraLabels: map[string]string{
 						"inner": "pod56",
 					},
 					ReplicaNum: 5,
 					Stateful:   false,
 					Duration:   0,
-					spec: PodSpec{
+					Spec: PodSpec{
 						Name:     "simple-test",
 						ImageTag: "harbor.scs.buaa.edu.cn/library/nginx:1.17",
 						Envs:     nil,

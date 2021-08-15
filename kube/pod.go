@@ -18,12 +18,12 @@ import (
 
 type PodDeployOpt struct {
 	Labels               map[string]string
-	extraLabels          map[string]string
+	ExtraLabels          map[string]string
 	ReplicaNum           int32
 	Stateful             bool
 	Duration             time.Duration
 	DockerRegistrySecret string
-	spec                 PodSpec
+	Spec                 PodSpec
 }
 
 type PodSpec struct {
@@ -52,13 +52,13 @@ func (opt *PodDeployOpt) fix() {
 	for k, v := range opt.Labels {
 		podLabels[k] = v
 	}
-	for k, v := range opt.extraLabels {
+	for k, v := range opt.ExtraLabels {
 		podLabels[k] = v
 	}
-	opt.spec.labels = podLabels
+	opt.Spec.labels = podLabels
 
-	if len(opt.spec.PullPolicy) <= 0 {
-		opt.spec.PullPolicy = PullIfNotPresent
+	if len(opt.Spec.PullPolicy) <= 0 {
+		opt.Spec.PullPolicy = PullIfNotPresent
 	}
 }
 
@@ -77,7 +77,7 @@ func (cli *Client) PodDeploy(ctx context.Context, opt *PodDeployOpt) (err error)
 	ctx, cancel := context.WithTimeout(ctx, opt.Duration)
 	defer cancel()
 
-	container, err := getContainer(opt.spec)
+	container, err := getContainer(opt.Spec)
 	if err != nil {
 		return
 	}
@@ -91,11 +91,11 @@ func (cli *Client) PodDeploy(ctx context.Context, opt *PodDeployOpt) (err error)
 		}()
 
 		deployOpt := &DeployOpt{
-			Name:       opt.spec.Name,
+			Name:       opt.Spec.Name,
 			Labels:     opt.Labels,
 			ReplicaNum: opt.ReplicaNum,
 			Namespace:  cli.namespace,
-			PodLabels:  opt.spec.labels,
+			PodLabels:  opt.Spec.labels,
 		}
 		if len(opt.DockerRegistrySecret) > 0 {
 			deployOpt.ImagePullSecrets = append(deployOpt.ImagePullSecrets, v1.LocalObjectReference{Name: opt.DockerRegistrySecret})
@@ -114,7 +114,7 @@ func (cli *Client) PodDeploy(ctx context.Context, opt *PodDeployOpt) (err error)
 			return
 		}
 		// wait pod for done
-		//errMsg, err = waitPodsForRunning(ctx, clientSet, opt.Namespace, opt.spec.labels)
+		//errMsg, err = waitPodsForRunning(ctx, clientSet, opt.Namespace, opt.Spec.labels)
 		return
 	}()
 
