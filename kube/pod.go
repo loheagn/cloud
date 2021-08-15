@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	apiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -37,6 +36,10 @@ type PodSpec struct {
 	labels     map[string]string
 	PullPolicy PullPolicy
 	Quota
+}
+
+type PodExportNodePortOpt struct {
+	BaseServiceOpt
 }
 
 func (opt *PodDeployOpt) fix() {
@@ -123,6 +126,27 @@ func (cli *Client) PodDeploy(ctx context.Context, opt *PodDeployOpt) (err error)
 	return
 }
 
+func (cli *Client) PodExportNodePort(ctx context.Context, opt *PodExportNodePortOpt) (ports []SvcPort, err error) {
+	svc, err := cli.CreateOrReplaceService(ctx, &ServiceOpt{
+		BaseServiceOpt: opt.BaseServiceOpt,
+		Type:           v1.ServiceTypeNodePort,
+	})
+	if err != nil {
+		return
+	}
+	for _, port := range svc.Spec.Ports {
+		ports = append(ports, SvcPort{
+			Port: Port{
+				Name:     port.Name,
+				Protocol: string(port.Protocol),
+				Port:     port.TargetPort.IntVal,
+			},
+			ExportPort: port.NodePort,
+		})
+	}
+	return
+}
+
 func waitPodForReady(ctx context.Context, client *kubernetes.Clientset, namespace string, labels map[string]string) (errMsg string, err error) {
 	listOpt, err := getListOpt(labels)
 	if err != nil {
@@ -134,9 +158,9 @@ func waitPodForReady(ctx context.Context, client *kubernetes.Clientset, namespac
 			return false, nil
 		}
 		switch pod.Status.Phase {
-		case apiv1.PodRunning, apiv1.PodSucceeded:
+		case v1.PodRunning, v1.PodSucceeded:
 			return true, nil
-		case apiv1.PodFailed:
+		case v1.PodFailed:
 			errMsg = pod.Status.Message
 			return false, nil
 		default:
@@ -190,8 +214,8 @@ func waitPodForReady(ctx context.Context, client *kubernetes.Clientset, namespac
 	//return
 }
 
-func getContainer(spec PodSpec) (*apiv1.Container, error) {
-	container := &apiv1.Container{
+func getContainer(spec PodSpec) (*v1.Container, error) {
+	container := &v1.Container{
 		Name:            spec.Name,
 		Image:           spec.ImageTag,
 		ImagePullPolicy: spec.PullPolicy.official(),
@@ -201,9 +225,9 @@ func getContainer(spec PodSpec) (*apiv1.Container, error) {
 	container.Ports = getContainerPorts(spec.Ports)
 
 	// 环境变量
-	var envs []apiv1.EnvVar
+	var envs []v1.EnvVar
 	for k, v := range spec.Envs {
-		envs = append(envs, apiv1.EnvVar{
+		envs = append(envs, v1.EnvVar{
 			Name:  k,
 			Value: v,
 		})
@@ -237,10 +261,10 @@ func getContainer(spec PodSpec) (*apiv1.Container, error) {
 	return container, nil
 }
 
-func getContainerPorts(dbPorts []Port) []apiv1.ContainerPort {
-	var ports []apiv1.ContainerPort
+func getContainerPorts(dbPorts []Port) []v1.ContainerPort {
+	var ports []v1.ContainerPort
 	for i, port := range dbPorts {
-		p := apiv1.ContainerPort{}
+		p := v1.ContainerPort{}
 
 		// 处理端口名称
 		if port.Name != "" {
@@ -250,14 +274,14 @@ func getContainerPorts(dbPorts []Port) []apiv1.ContainerPort {
 		}
 
 		// 处理端口协议，默认为tcp
-		var protocol apiv1.Protocol
+		var protocol v1.Protocol
 		switch strings.ToLower(port.Protocol) {
 		case "udp":
-			protocol = apiv1.ProtocolUDP
+			protocol = v1.ProtocolUDP
 		case "sctp":
-			protocol = apiv1.ProtocolSCTP
+			protocol = v1.ProtocolSCTP
 		default:
-			protocol = apiv1.ProtocolTCP
+			protocol = v1.ProtocolTCP
 		}
 		p.Protocol = protocol
 

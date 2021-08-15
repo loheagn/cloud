@@ -42,6 +42,11 @@ type Port struct {
 	Port     int32
 }
 
+type SvcPort struct {
+	Port
+	ExportPort int32
+}
+
 type Cmd struct {
 	Command []string
 	Args    []string
